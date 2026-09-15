@@ -1,0 +1,26 @@
+\begin{thebibliography}{1}
+
+\bibitem{cai2023disde}
+Tiffany~Tianhui Cai, Hongseok Namkoong, and Steve Yadlowsky.
+\newblock Diagnosing model performance under distribution shift.
+\newblock {\em arXiv preprint arXiv:2303.02011}, 2023.
+
+\bibitem{robocup}
+Hiroaki Kitano, Minoru Asada, Yasuo Kuniyoshi, Itsuki Noda, and Eiichi Osawa.
+\newblock The robocup soccer server.
+\newblock In {\em RoboCup-97: Robot Soccer World Cup I}, pages 62--79.
+  Springer, 1998.
+
+\bibitem{ng1999}
+Andrew~Y. Ng, Daishi Harada, and Stuart Russell.
+\newblock Policy invariance under reward transformations: Theory and
+  application to reward shaping.
+\newblock In {\em Proceedings of the Sixteenth International Conference on
+  Machine Learning}, pages 278--287, 1999.
+
+\bibitem{sutton}
+Richard~S. Sutton and Andrew~G. Barto.
+\newblock {\em Reinforcement Learning: An Introduction}.
+\newblock MIT Press, 2 edition, 2018.
+
+\end{thebibliography}

@@ -1,0 +1,9 @@
+\section{Modelado Formal como MDP}
+Definir rigurosamente la tupla de Markov $\langle \mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma \rangle$:
+
+\begin{itemize}
+    \item \textbf{Espacio de Estados ($\mathcal{S}$):} Detallar las variables observadas (distancias y ángulos polares). En Fase 1 (tabular), explicar y justificar el esquema de discretización utilizado y la cardinalidad total $|\mathcal{S}|$.
+    \item \textbf{Espacio de Acciones ($\mathcal{A}$):} Detallar las macro-acciones definidas (potencias de \texttt{DASH}, ángulos de \texttt{TURN}, o \texttt{KICK}).
+    \item \textbf{Función de Recompensa ($\mathcal{R}$):} Expresión matemática formal de la recompensa por paso $R(s, a, s')$. Justificar los valores asignados a estados terminales de éxito, penalizaciones temporales y recompensas intermedias (reward shaping).
+    \item \textbf{Factor de Descuento ($\gamma$) y Horizonte:} Indicar el valor de $\gamma \in [0, 1)$ y el número máximo de pasos por episodio.
+\end{itemize}
