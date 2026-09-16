@@ -24,4 +24,4 @@ RUN pip install --no-cache-dir -U pip setuptools wheel && \
 EXPOSE 8888
 
 # Comando por defecto: levantar Jupyter Lab accesible sin token para entorno local
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.token=''", "--ServerApp.password=''"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.token=''", "--ServerApp.password=''", "--ServerApp.disable_check_xsrf=True"]

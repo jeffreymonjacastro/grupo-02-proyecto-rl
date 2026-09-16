@@ -18,15 +18,16 @@ services:
   # ============================================================================
   rl-agent:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: robocup_rl_agent
     environment:
       - SERVER_HOST=rcssserver
       - SERVER_PORT=6000
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./workspace:/workspace
+      - ../src:/workspace/src
+      - ../notebooks:/workspace/notebooks
     ports:
       - "8888:8888"   # Jupyter Lab
     depends_on:
