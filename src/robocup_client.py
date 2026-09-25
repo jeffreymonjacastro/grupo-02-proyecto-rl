@@ -9,7 +9,7 @@ import select
 import re
 import math
 import time
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, Optional
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -148,6 +148,10 @@ class RoboCup2DClient:
 
     def _parse_and_update(self, msg: str):
         """Extrae la información visual de mensajes (see ...)."""
+        # Una nueva imagen no debe conservar objetos de la imagen anterior.
+        self.last_observation["ball"] = None
+        self.last_observation["goal_opp"] = None
+        self.last_observation["goal_own"] = None
         t_match = re.search(r"\(see\s+(\d+)", msg)
         if t_match:
             self.last_observation["time"] = int(t_match.group(1))

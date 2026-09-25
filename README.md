@@ -172,3 +172,33 @@ Puedes programar en tus Notebooks directamente dentro de VS Code aprovechando to
 3. Selecciona **Existing Jupyter Server** (Servidor Jupyter existente).
 4. Pega la URL del servidor local: `http://localhost:8888` y presiona Enter.
 5. ¡Listo! Todo el código que ejecutes en el Notebook dentro de VS Code se estará procesando internamente en el contenedor Docker.
+
+---
+
+## 8. Tareas acotadas de P1
+
+El código nuevo de `src/tasks/` implementa **modelos cinemáticos reducidos** para estudiar las cuatro tareas del [enunciado](Enunciado%20proyecto.pdf). Cada tarea tiene un notebook y un [informe teórico en Markdown](docs/README.md):
+
+| Tarea | Código | Notebook | Formulación |
+|---|---|---|---|
+| Persecución | `src/tasks/ball_pursuit.py` | `notebooks/01_ball_pursuit.ipynb` | `docs/ball_pursuit.md` |
+| Drible | `src/tasks/ball_dribbling.py` | `notebooks/02_ball_dribbling.ipynb` | `docs/ball_dribbling.md` |
+| Tiro a puerta | `src/tasks/goal_shooting.py` | `notebooks/03_goal_shooting.ipynb` | `docs/goal_shooting.md` |
+| Pase y posesión | `src/tasks/passing_possession.py` | `notebooks/04_passing_possession.ipynb` | `docs/passing_possession.md` |
+
+`src/tabular.py` comparte Q-Learning y la evaluación greedy; `src/metrics.py` calcula los resúmenes; `src/plotting.py` dibuja curvas, mapas de valor/política y trayectorias. `src/trainer_client.py` permite colocar el balón en `rcssserver` mediante UDP. El Docker Compose habilita el puerto 6001 para ese trainer, según el [manual del simulador](https://rcsoccersim.readthedocs.io/en/latest/coach.html).
+
+### Cómo levantar y abrir las tareas
+
+Desde la raíz del repositorio, cuando termine la descarga de Docker:
+
+```powershell
+docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml ps
+```
+
+Abre cualquiera de los cuatro notebooks en VS Code y selecciona **Existing Jupyter Server** con `http://localhost:8888`. Ejecútalo de arriba abajo. Cada notebook entrena con ε constante y ε decreciente, registra retorno descontado $G_0$, tasa de éxito y pasos, y muestra una estimación de $V^*(s)$, $\pi^*(s)$ y una trayectoria. El de tiro evalúa arco abierto y portero activo por separado. También puedes usar un kernel Python local con las dependencias de `requirements.txt`; en ese caso el código buscará `src/` desde la raíz o `notebooks/`.
+
+La última celda de `01_ball_pursuit.ipynb` contiene una comprobación opcional del jugador y el trainer reales. Cambia `RUN_LIVE_PROBE` a `True` cuando los contenedores estén listos. El entorno del notebook y `rcssserver` tienen dinámicas distintas: las curvas pertenecen al modelo reducido y la celda UDP comprueba la conexión, no el rendimiento del agente en RoboCup. Para tiro y pase faltan observaciones de portero, postes y jugadores en `robocup_client.py` antes de una evaluación real.
+
+Los notebooks nuevos se entregan sin salidas guardadas porque todavía no se han ejecutado. Cuando Docker esté disponible, ejecuta cada uno y registra los resultados obtenidos; los criterios de éxito no se dan por cumplidos de antemano.
