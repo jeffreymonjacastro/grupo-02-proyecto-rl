@@ -1,0 +1,371 @@
+class BallDribblingSimEnv:
+    """
+    Entorno cinemático simplificado para Ball Dribbling.
+
+    Estado:
+        (d_ball_bin, angle_ball_bin, d_goal_bin, angle_goal_bin)
+
+    Acciones:
+        0 -> KICK(25)
+        1 -> DASH(80)
+        2 -> TURN(+35)
+        3 -> TURN(-35)
+
+    La cancha mide 105 x 68 m.
+    x = [-52.5, 52.5]
+    y = [-34, 34]
+    """
+
+    def __init__(
+        self,
+        max_steps=120,
+        control_threshold=0.8,
+        lost_threshold=4.0,
+        target_distance=30.0,
+    ):
+        self.max_steps = max_steps
+
+        # Estos dos thresholds son decisiones de diseño del entorno.
+        self.control_threshold = control_threshold
+        self.lost_threshold = lost_threshold
+
+        # Criterio de éxito de la tarea: conducir > 30 m
+        self.target_distance = target_distance
+
+        # Centro de la portería rival
+        self.goal_x = 52.5
+        self.goal_y = 0.0
+
+        self.reset()
+
+    def reset(self):
+        # --------------------------------------------------
+        # 1. Jugador inicia en una zona aleatoria de su campo
+        # --------------------------------------------------
+        self.player_x = np.random.uniform(-30.0, -20.0)
+        self.player_y = np.random.uniform(-8.0, 8.0)
+
+        # Lo orientamos aproximadamente hacia la portería rival
+        self.player_theta = np.random.uniform(-20.0, 20.0)
+
+        # --------------------------------------------------
+        # 2. Balón empieza muy cerca del jugador
+        # --------------------------------------------------
+        # Lo ponemos delante del jugador para iniciar con posesión.
+        initial_ball_distance = np.random.uniform(0.4, 0.7)
+
+        rad = math.radians(self.player_theta)
+
+        self.ball_x = self.player_x + initial_ball_distance * math.cos(rad)
+
+        self.ball_y = self.player_y + initial_ball_distance * math.sin(rad)
+
+        # Velocidad del balón para simular inercia
+        self.ball_vx = 0.0
+        self.ball_vy = 0.0
+
+        # Posición inicial del balón para medir avance
+        self.ball_start_x = self.ball_x
+
+        self.steps = 0
+
+        # Trayectorias
+        self.player_trajectory_x = [self.player_x]
+        self.player_trajectory_y = [self.player_y]
+
+        self.ball_trajectory_x = [self.ball_x]
+        self.ball_trajectory_y = [self.ball_y]
+
+        return self._get_state()
+
+    # ============================================================
+    # OBSERVACIONES
+    # ============================================================
+
+    def _relative_polar(self, object_x, object_y):
+        """
+        Devuelve distancia y ángulo relativo del objeto respecto
+        al jugador y a la orientación de su cuerpo.
+        """
+
+        dx = object_x - self.player_x
+        dy = object_y - self.player_y
+
+        dist = math.hypot(dx, dy)
+
+        angle_global = math.degrees(math.atan2(dy, dx))
+
+        angle_rel = (angle_global - self.player_theta + 180.0) % 360.0 - 180.0
+
+        return dist, angle_rel
+
+    def _get_obs(self):
+        # Balón respecto al jugador
+        d_ball, angle_ball = self._relative_polar(
+            self.ball_x,
+            self.ball_y,
+        )
+
+        # Meta respecto al jugador
+        d_goal, angle_goal = self._relative_polar(
+            self.goal_x,
+            self.goal_y,
+        )
+
+        return (
+            d_ball,
+            angle_ball,
+            d_goal,
+            angle_goal,
+        )
+
+    # ============================================================
+    # DISCRETIZACIÓN
+    # ============================================================
+
+    def _distance_ball_bin(self, dist):
+        """
+        El propio bin de distancia indica indirectamente
+        si estamos driblando o recuperando el balón.
+        """
+
+        if dist <= self.control_threshold:
+            return 0  # balón controlado
+
+        elif dist < 2.0:
+            return 1  # cerca, fácilmente recuperable
+
+        elif dist < self.lost_threshold:
+            return 2  # lejos, recuperación
+
+        else:
+            return 3  # prácticamente perdido
+
+    def _distance_goal_bin(self, dist):
+        if dist < 10.0:
+            return 0
+        elif dist < 20.0:
+            return 1
+        elif dist < 40.0:
+            return 2
+        else:
+            return 3
+
+    def _angle_bin(self, angle):
+        """
+        Misma idea que Ball Pursuit:
+        frontal + sectores laterales/posteriores.
+        """
+
+        if abs(angle) <= 15.0:
+            return 0
+
+        elif -60.0 <= angle < -15.0:
+            return 1
+
+        elif 15.0 < angle <= 60.0:
+            return 2
+
+        elif angle < -60.0:
+            return 3
+
+        else:
+            return 4
+
+    def _discretize(
+        self,
+        d_ball,
+        angle_ball,
+        d_goal,
+        angle_goal,
+    ):
+        return (
+            self._distance_ball_bin(d_ball),
+            self._angle_bin(angle_ball),
+            self._distance_goal_bin(d_goal),
+            self._angle_bin(angle_goal),
+        )
+
+    def _get_state(self):
+        obs = self._get_obs()
+
+        return self._discretize(*obs)
+
+    # ============================================================
+    # STEP
+    # ============================================================
+
+    def step(self, action):
+        self.steps += 1
+
+        (
+            d_ball_prev,
+            angle_ball_prev,
+            d_goal_prev,
+            angle_goal_prev,
+        ) = self._get_obs()
+
+        # --------------------------------------------------------
+        # ACCIÓN 0: KICK(25)
+        # --------------------------------------------------------
+        if action == 0:
+
+            # Solo puede patear si tiene el balón bajo control
+            if d_ball_prev <= self.control_threshold:
+
+                rad = math.radians(self.player_theta)
+
+                # Simplificación cinemática del KICK 25
+                kick_strength = 0.7
+
+                self.ball_vx += kick_strength * math.cos(rad)
+                self.ball_vy += kick_strength * math.sin(rad)
+
+        # --------------------------------------------------------
+        # ACCIÓN 1: DASH(80)
+        # --------------------------------------------------------
+        elif action == 1:
+
+            rad = math.radians(self.player_theta)
+
+            dash_distance = 0.8
+
+            self.player_x += dash_distance * math.cos(rad)
+
+            self.player_y += dash_distance * math.sin(rad)
+
+        # --------------------------------------------------------
+        # ACCIÓN 2: TURN(+35)
+        # --------------------------------------------------------
+        elif action == 2:
+
+            self.player_theta = (self.player_theta + 35.0 + 180.0) % 360.0 - 180.0
+
+        # --------------------------------------------------------
+        # ACCIÓN 3: TURN(-35)
+        # --------------------------------------------------------
+        elif action == 3:
+
+            self.player_theta = (self.player_theta - 35.0 + 180.0) % 360.0 - 180.0
+
+        # ========================================================
+        # FÍSICA DEL BALÓN
+        # ========================================================
+
+        self.ball_x += self.ball_vx
+        self.ball_y += self.ball_vy
+
+        # Decaimiento de velocidad
+        ball_decay = 0.94
+
+        self.ball_vx *= ball_decay
+        self.ball_vy *= ball_decay
+
+        # ========================================================
+        # REGISTRAR TRAYECTORIAS
+        # ========================================================
+
+        self.player_trajectory_x.append(self.player_x)
+
+        self.player_trajectory_y.append(self.player_y)
+
+        self.ball_trajectory_x.append(self.ball_x)
+
+        self.ball_trajectory_y.append(self.ball_y)
+
+        # ========================================================
+        # NUEVA OBSERVACIÓN
+        # ========================================================
+
+        (
+            d_ball_curr,
+            angle_ball_curr,
+            d_goal_curr,
+            angle_goal_curr,
+        ) = self._get_obs()
+
+        done = False
+
+        # ========================================================
+        # CONDICIONES TERMINALES
+        # ========================================================
+
+        # Balón fuera de la cancha
+        ball_out = abs(self.ball_x) > 52.5 or abs(self.ball_y) > 34.0
+
+        # Jugador fuera
+        player_out = abs(self.player_x) > 52.5 or abs(self.player_y) > 34.0
+
+        # Distancia recorrida hacia la meta
+        progress_total = self.ball_x - self.ball_start_x
+
+        success = progress_total >= self.target_distance
+
+        # ========================================================
+        # REWARD
+        # ========================================================
+
+        if success:
+            reward = 100.0
+            done = True
+
+        elif ball_out or player_out:
+            reward = -50.0
+            done = True
+
+        elif d_ball_curr >= self.lost_threshold:
+            # Aquí ya consideramos que realmente perdió el balón
+            reward = -30.0
+            done = True
+
+        elif self.steps >= self.max_steps:
+            reward = -20.0
+            done = True
+
+        else:
+            # ----------------------------------------------------
+            # RECOMPENSA DENSA
+            # ----------------------------------------------------
+
+            # 1. progreso del balón hacia la portería
+            goal_progress = d_goal_prev - d_goal_curr
+
+            reward = 5.0 * goal_progress
+
+            # 2. pequeño coste temporal
+            reward -= 0.2
+
+            # 3. premiar mantener el balón cerca
+            if d_ball_curr <= self.control_threshold:
+                reward += 0.5
+
+            # 4. penalizar que el balón se aleje demasiado
+            elif d_ball_curr > 2.0:
+                reward -= 1.0
+
+        next_state = self._discretize(
+            d_ball_curr,
+            angle_ball_curr,
+            d_goal_curr,
+            angle_goal_curr,
+        )
+
+        info = {
+            "ball_dist": d_ball_curr,
+            "ball_angle": angle_ball_curr,
+            "goal_dist": d_goal_curr,
+            "goal_angle": angle_goal_curr,
+            "progress": progress_total,
+            "success": success,
+            "has_control": (d_ball_curr <= self.control_threshold),
+        }
+
+        return (
+            next_state,
+            reward,
+            done,
+            info,
+        )
+
+
+print("Clase BallDribblingSimEnv compilada correctamente.")
